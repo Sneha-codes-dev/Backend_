@@ -65,7 +65,7 @@ const users = [
 
 // 7. map() with Arrow Function
 
-const userNames = users.map((user) => {
+const userNames = users.map((user) => {      //map() creates a new array by transforming each element.
     return user.name;
 });
 console.log(userNames);
@@ -73,7 +73,7 @@ console.log(userNames);
 
 // 8. filter() with Arrow Function
 
-const olderUsers = users.filter((user) => {
+const olderUsers = users.filter((user) => {      // filter() creates a new array containing only elements that satisfy the condition.
     return user.age > 25;
 });
 
@@ -81,31 +81,30 @@ console.log(olderUsers);
 
 // 9. find() with Arrow Function
 
-const david = users.find((user) => {
+const userDavid = users.find((user) => {     //find() returns the first element that satisfies the condition.
     return user.name === "David";
 });
 
-console.log(david);
+console.log(userDavid);
 
 // 10. forEach() with Arrow Function
 
-users.forEach((user) => {
+users.forEach((user) => {                      //forEach() executes a function for every element.
     console.log(user.name + " - " + user.age);
 });
 
 // 11. Callback Function
 
-const processUser = (name, callback) => {
-    callback(name);
+const processUser = (name, callback) => {         
+    callback(name);                                //Pass a function to another function
 };
-
 processUser("John", (name) => {
     console.log("Processing user:", name);
 });
 
 // 12. Promise
 
-const userDataPromise = new Promise((resolve) => {
+const userDataPromise = new Promise((resolve) => {      //A Promise represents a value that may be available now,later, or may fail.
 
     setTimeout(() => {
         resolve("User data received successfully");
