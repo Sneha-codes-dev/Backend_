@@ -15,17 +15,12 @@ mongoose.connect(process.env.MONGODB_CONNECTION_STRING)
         console.log(err);
     });
 
-// Create GET API for home page
-app.get("/", (req, res) => {
-    res.send("Welcome to Stackly!!");
-});
-
 // GET API to retrieve users from MongoDB
 app.get("/users", async (req, res) => {
     try {
         const users = await User.find();
-
         res.json(users);
+        
     } catch (error) {
         res.status(500).json({
             message: "Error retrieving users"
