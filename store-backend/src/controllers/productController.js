@@ -36,17 +36,139 @@ if (req.body.stock !== undefined &&
 };
 
 //GET All Products
+
+
 const getAllProducts = async (req, res) => {
     try {
-        const products = await Product.find();
+        const {
+            search,
+            category,
+            minPrice,
+            maxPrice,
+            page = "1",
+            limit = "10",
+            sort
+        } = req.query;
 
-        res.status(200).json(products);
+        const filter = {};
+
+        // Product search by name
+        if (typeof search === "string" && search.trim()) {
+            const escapedSearch = search.trim()
+                .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+            filter.name = {
+                $regex: escapedSearch,
+                $options: "i"
+            };
+        }
+
+        // Filter products by category
+        if (typeof category === "string" && category.trim()) {
+            const escapedCategory = category.trim()
+                .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+            filter.category = {
+                $regex: `^${escapedCategory}$`,
+                $options: "i"
+            };
+        }
+
+        // Validate price range
+        for (const price of [minPrice, maxPrice]) {
+            if (price !== undefined &&
+                (typeof price !== "string" ||
+                 !price.trim() ||
+                 !Number.isFinite(Number(price)) ||
+                 Number(price) < 0)) {
+                return res.status(400).json({
+                    message: "Price filters must be non-negative numbers"
+                });
+            }
+        }
+
+        if (minPrice !== undefined &&
+            maxPrice !== undefined &&
+            Number(minPrice) > Number(maxPrice)) {
+            return res.status(400).json({
+                message: "Minimum price cannot exceed maximum price"
+            });
+        }
+
+        // Filter products by price range
+        if (minPrice !== undefined || maxPrice !== undefined) {
+            filter.price = {};
+
+            if (minPrice !== undefined) {
+                filter.price.$gte = Number(minPrice);
+            }
+
+            if (maxPrice !== undefined) {
+                filter.price.$lte = Number(maxPrice);
+            }
+        }
+
+        // Validate pagination parameters
+        const pageNumber = Number(page);
+        const limitNumber = Number(limit);
+
+        if (typeof page !== "string" ||
+            typeof limit !== "string" ||
+            !Number.isSafeInteger(pageNumber) ||
+            !Number.isSafeInteger(limitNumber) ||
+            pageNumber < 1 ||
+            limitNumber < 1 ||
+            limitNumber > 100) {
+            return res.status(400).json({
+                message: "Page must be a positive integer and limit must be between 1 and 100"
+            });
+        }
+
+        // Pagination
+        const skip = (pageNumber - 1) * limitNumber;
+
+        if (!Number.isSafeInteger(skip)) {
+            return res.status(400).json({
+                message: "Page number is too large"
+            });
+        }
+
+        // Sorting by price
+        let sortOption = { _id: 1 };
+
+        if (sort === "price_asc") {
+            sortOption = { price: 1, _id: 1 };
+        } else if (sort === "price_desc") {
+            sortOption = { price: -1, _id: 1 };
+        } else if (sort !== undefined) {
+            return res.status(400).json({
+                message: "Invalid sort option. Use price_asc or price_desc"
+            });
+        }
+
+        // Count matching products
+        const totalProducts = await Product.countDocuments(filter);
+
+        // Fetch products
+        const products = await Product.find(filter)
+            .sort(sortOption)
+            .skip(skip)
+            .limit(limitNumber);
+
+        res.status(200).json({
+            totalProducts,
+            currentPage: pageNumber,
+            totalPages: Math.ceil(totalProducts / limitNumber),
+            products
+        });
+
     } catch (error) {
         res.status(500).json({
             message: error.message
         });
     }
 };
+
 
 //GET Product by ID
 
