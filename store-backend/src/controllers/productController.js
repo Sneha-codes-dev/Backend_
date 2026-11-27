@@ -196,11 +196,97 @@ const getProductById = async (req, res) => {
 };
 
 //Update Product
-const updateProduct = async (req, res) =>{
-  try {
+const updateProduct = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Validate product ID
+        if (!mongoose.isObjectIdOrHexString(id)) {
+            return res.status(400).json({
+                message: "Invalid product ID"
+            });
+        }
+
+        // Validate request body
+        if (!req.body ||
+            typeof req.body !== "object" ||
+            Array.isArray(req.body) ||
+            Object.keys(req.body).length === 0) {
+            return res.status(400).json({
+                message: "Update request cannot be empty or invalid"
+            });
+        }
+
+        // Define allowed update fields
+        const allowedFields = [
+            "name",
+            "description",
+            "price",
+            "category",
+            "stock"
+        ];
+
+        const updateFields = Object.keys(req.body);
+
+        // Check for unsupported fields
+        const invalidFields = updateFields.filter(
+            field => !allowedFields.includes(field)
+        );
+
+        if (invalidFields.length > 0) {
+            return res.status(400).json({
+                message: "Unsupported update fields",
+                invalidFields
+            });
+        }
+
+        const { name, description, price, category, stock } = req.body;
+
+        // Validate product name
+        if (name !== undefined &&
+            (typeof name !== "string" || name.trim() === "")) {
+            return res.status(400).json({
+                message: "Product name must be a non-empty string"
+            });
+        }
+
+        // Validate description
+        if (description !== undefined &&
+            typeof description !== "string") {
+            return res.status(400).json({
+                message: "Description must be a string"
+            });
+        }
+
+        // Validate price
+        if (price !== undefined &&
+            (typeof price !== "number" ||
+             !Number.isFinite(price) || price < 0.01)) {
+            return res.status(400).json({
+                message: "Price must be a number greater than or equal to 0.01"
+            });
+        }
+
+        // Validate category
+        if (category !== undefined &&
+            (typeof category !== "string" || category.trim() === "")) {
+            return res.status(400).json({
+                message: "Category must be a non-empty string"
+            });
+        }
+
+        // Validate stock
+        if (stock !== undefined &&
+            (!Number.isInteger(stock) || stock < 0)) {
+            return res.status(400).json({
+                message: "Stock must be a non-negative integer"
+            });
+        }
+
+        // Update product
         const updatedProduct = await Product.findByIdAndUpdate(
-            req.params.id,
-            req.body,
+            id,
+            { $set: req.body },
             { new: true, runValidators: true }
         );
 
@@ -211,19 +297,42 @@ const updateProduct = async (req, res) =>{
         }
 
         res.status(200).json(updatedProduct);
-    }catch (error) {
-        res.status(500).json({
-            message: error.message
+
+    } catch (error) {
+    if (error.name === "ValidationError") {
+        return res.status(400).json({
+            message: "Product validation failed",
+            error: error.message
         });
     }
+
+    if (error.name === "CastError") {
+        return res.status(400).json({
+            message: "Invalid product data"
+        });
+    }
+
+    console.error("Update product error:", error);
+
+    return res.status(500).json({
+        message: "Internal server error"
+    });
 }
+};
 
 //Delete Product
 const deleteProduct = async (req, res) => {
     try {
-        const deletedProduct = await Product.findByIdAndDelete(
-            req.params.id
-        );
+        const { id } = req.params;
+
+        // Validate product ID
+        if (!mongoose.isObjectIdOrHexString(id)) {
+            return res.status(400).json({
+                message: "Invalid product ID"
+            });
+        }
+
+        const deletedProduct = await Product.findByIdAndDelete(id);
 
         if (!deletedProduct) {
             return res.status(404).json({
@@ -232,14 +341,22 @@ const deleteProduct = async (req, res) => {
         }
 
         res.status(200).json({
-            message: "Product deleted successfully",
-            product: deletedProduct
+            message: "Product deleted successfully"
         });
+
     } catch (error) {
-        res.status(500).json({
-            message: error.message
+    if (error.name === "CastError") {
+        return res.status(400).json({
+            message: "Invalid product ID"
         });
     }
+
+    console.error("Delete product error:", error);
+
+    return res.status(500).json({
+        message: "Internal server error"
+    });
+}
 };
 
 module.exports = { createProduct, getAllProducts, getProductById, updateProduct, deleteProduct };
