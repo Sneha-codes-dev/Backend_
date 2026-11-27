@@ -5,6 +5,8 @@ const express = require("express");
 
 const connectDB = require("./config/db");
 const userRoutes = require("./routes/userRoutes");
+const productRoutes = require("./routes/productRoutes");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
@@ -13,6 +15,8 @@ connectDB();
 app.use(express.json());
 
 app.use("/api/users", userRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/auth", authRoutes);
 
 app.get("/api/status", (req, res) => {
     res.json({

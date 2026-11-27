@@ -1,28 +1,39 @@
 const User = require("../models/user");
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
 
 
 //Create user
-const createUser = async(req,res) => {
-  try {
-    const user = new User(req.body);
+const createUser = async (req, res) => {
+    try {
+        if (!req.body.name || !req.body.email) {
+            return res.status(400).json({
+                message: "Name and email are required"
+            });
+        }
 
-    const savedUser = await user.save();
+        const userData = { ...req.body };
 
-    const userResponse = savedUser.toObject();
+        if (userData.password) {
+            userData.password = await bcrypt.hash(userData.password, 10);
+        }
 
-    delete userResponse.password;
+        const user = new User(userData);
 
-    res.status(201).json(userResponse);
+        const savedUser = await user.save();
 
-  } catch(error) {
-    
-    res.status(500).json({
+        const userResponse = savedUser.toObject();
 
-      message: "Error creating user!"
-    });
-  }
+        delete userResponse.password;
+
+        res.status(201).json(userResponse);
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Error creating user!"
+        });
+    }
 };
-
 //GET user
 const getUsers = async(req,res) => {
   try{
@@ -38,6 +49,12 @@ const getUsers = async(req,res) => {
 //GET User by ID
 const getUserById = async (req, res) => {
   try {
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({
+        message: "Invalid user ID"
+    });
+}
     const user = await User.findById(req.params.id).select("-password");
 
     if (!user) {
